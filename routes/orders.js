@@ -4,7 +4,6 @@ import requireUser from "../middleware/requireUser.js";
 
 const router = express.Router();
 
-
 router.post("/", requireUser, async (req, res, next) => {
   try {
     const { date, note } = req.body;
@@ -30,7 +29,6 @@ router.post("/", requireUser, async (req, res, next) => {
   }
 });
 
-
 router.get("/", requireUser, async (req, res, next) => {
   try {
     const { rows } = await db.query(
@@ -42,7 +40,6 @@ router.get("/", requireUser, async (req, res, next) => {
     next(err);
   }
 });
-
 
 async function getOrderOrThrow(id, userId) {
   const {
@@ -64,17 +61,27 @@ async function getOrderOrThrow(id, userId) {
   return order;
 }
 
-
-router.get("/:id", requireUser, async (req, res, next) => {
+router.get("/:id/orders", requireUser, async (req, res, next) => {
   try {
     const { id } = req.params;
-    const order = await getOrderOrThrow(id, req.user.id);
-    res.send(order);
+
+    const { rows } = await db.query(
+      `
+      SELECT o.*
+      FROM orders o
+      JOIN orders_products op
+        ON o.id = op.order_id
+      WHERE op.product_id = $1
+      AND o.user_id = $2;
+      `,
+      [id, req.user.id]
+    );
+
+    res.send(rows);
   } catch (err) {
     next(err);
   }
 });
-
 
 router.post("/:id/products", requireUser, async (req, res, next) => {
   try {
@@ -87,16 +94,11 @@ router.post("/:id/products", requireUser, async (req, res, next) => {
       });
     }
 
-    
     await getOrderOrThrow(id, req.user.id);
 
-    
     const {
       rows: [product],
-    } = await db.query(
-      "SELECT * FROM products WHERE id = $1;",
-      [productId]
-    );
+    } = await db.query("SELECT * FROM products WHERE id = $1;", [productId]);
     if (!product) {
       return res.status(404).send({ error: "Product not found" });
     }
@@ -117,7 +119,6 @@ router.post("/:id/products", requireUser, async (req, res, next) => {
     next(err);
   }
 });
-
 
 router.get("/:id/products", requireUser, async (req, res, next) => {
   try {

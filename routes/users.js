@@ -6,7 +6,6 @@ import jwt from "jsonwebtoken";
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET;
 
-
 router.post("/register", async (req, res, next) => {
   try {
     const { username, password } = req.body;
@@ -17,13 +16,9 @@ router.post("/register", async (req, res, next) => {
         .send({ error: "username and password are required" });
     }
 
-    
     const {
       rows: [existingUser],
-    } = await db.query(
-      "SELECT * FROM users WHERE username = $1;",
-      [username]
-    );
+    } = await db.query("SELECT * FROM users WHERE username = $1;", [username]);
 
     if (existingUser) {
       return res.status(400).send({ error: "Username already taken" });
@@ -53,7 +48,6 @@ router.post("/register", async (req, res, next) => {
   }
 });
 
-
 router.post("/login", async (req, res, next) => {
   try {
     const { username, password } = req.body;
@@ -66,10 +60,7 @@ router.post("/login", async (req, res, next) => {
 
     const {
       rows: [user],
-    } = await db.query(
-      "SELECT * FROM users WHERE username = $1;",
-      [username]
-    );
+    } = await db.query("SELECT * FROM users WHERE username = $1;", [username]);
 
     if (!user) {
       return res.status(401).send({ error: "Invalid credentials" });
@@ -85,10 +76,17 @@ router.post("/login", async (req, res, next) => {
       JWT_SECRET
     );
 
-    
     delete user.password;
 
     res.send({ token, user });
+  } catch (err) {
+    next(err);
+  }
+});
+router.get("/", async (req, res, next) => {
+  try {
+    const { rows } = await db.query("SELECT id, username FROM users");
+    res.send(rows);
   } catch (err) {
     next(err);
   }
